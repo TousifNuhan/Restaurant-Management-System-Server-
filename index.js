@@ -128,19 +128,19 @@ async function run() {
 
     //add employee
 
-    app.get('/addEmployee/:id', async (req, res) => {
+    app.get('/addEmployee/:id',verifyToken,verifyAdmin , async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
       const result = await employyeCollection.findOne(query)
       res.send(result)
     })
 
-    app.get('/addEmployee', async (req, res) => {
+    app.get('/addEmployee',verifyToken,verifyAdmin , async (req, res) => {
       const result = await employyeCollection.find().toArray()
       res.send(result)
     })
 
-    app.post('/addEmployee', async (req, res) => {
+    app.post('/addEmployee',verifyToken,verifyAdmin , async (req, res) => {
       const datas = req.body
       const result = await employyeCollection.insertOne(datas)
       res.send(result)
@@ -154,7 +154,7 @@ async function run() {
 
     })
 
-    app.patch('/addEmployee/:id', async (req, res) => {
+    app.patch('/addEmployee/:id',verifyToken,verifyAdmin ,async (req, res) => {
       const doc = req.body
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
