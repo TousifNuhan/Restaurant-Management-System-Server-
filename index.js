@@ -32,6 +32,7 @@ async function run() {
     const cartCollectetion = client.db('RestaurantDB').collection('carts')
     const paymentCollectetion = client.db('RestaurantDB').collection('payments')
     const employyeCollection = client.db("RestaurantDB").collection("employeeDetails")
+    const suppliedProductsCollection = client.db("RestaurantDB").collection("suppliedProducts")
 
     // create token
     app.post('/jwt', async (req, res) => {
@@ -70,6 +71,19 @@ async function run() {
       const isAdmin = user?.role === 'admin'
       if (!isAdmin) {
         return res.status(403).send({ message: 'Unauthorized Access' })
+      }
+      next()
+    }
+
+    // middleware : verify supplier
+
+    const verifySupplier = async (req, res, next) => {
+      const email = req.decoded.email
+      const query = { email: email }
+      const user = await userCollectetion.findOne(query)
+      const isSupplier = user.role === 'supplier'
+      if (!isSupplier) {
+        return res.status(403).send({ message: "Unauthorized Access" })
       }
       next()
     }
@@ -126,21 +140,64 @@ async function run() {
       res.send(result)
     })
 
+    // supplier related api's
+
+    app.get('/users/supplier/:email', verifyToken, async (req, res) => {
+
+      const email = req.params.email
+      if (!email === req.decoded) {
+        return res.status(403).send({ message: "Forbidden access" })
+      }
+      const query = { email: email }
+      const user = await userCollectetion.findOne(query)
+      let isSupplier = false
+      if (user) {
+        isSupplier = user?.role === 'supplier'
+      }
+      res.send({ isSupplier })
+    })
+
+    app.get('/addSupplyItems',async(req,res)=>{
+      const result=await suppliedProductsCollection.find().toArray()
+      res.send(result)
+    })
+
+    app.post('/addSupplyItems',verifyToken,verifySupplier,async(req,res)=>{
+       const data = req.body 
+       const result= await suppliedProductsCollection.insertOne(data)
+       res.send(result)
+    })
+
+
+    app.patch('/users/supplier/:id', verifyToken, verifyAdmin, async (req, res) => {
+      const ids = req.params.id
+      console.log(ids)
+      const filter = { _id: new ObjectId(ids) }
+      const updatedDoc = {
+        $set: {
+          role: "supplier"
+        }
+      }
+      const result = await userCollectetion.updateOne(filter, updatedDoc)
+      res.send(result)
+
+    })
+
     //add employee
 
-    app.get('/addEmployee/:id',verifyToken,verifyAdmin , async (req, res) => {
+    app.get('/addEmployee/:id', verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
       const result = await employyeCollection.findOne(query)
       res.send(result)
     })
 
-    app.get('/addEmployee',verifyToken,verifyAdmin , async (req, res) => {
+    app.get('/addEmployee', verifyToken, verifyAdmin, async (req, res) => {
       const result = await employyeCollection.find().toArray()
       res.send(result)
     })
 
-    app.post('/addEmployee',verifyToken,verifyAdmin , async (req, res) => {
+    app.post('/addEmployee', verifyToken, verifyAdmin, async (req, res) => {
       const datas = req.body
       const result = await employyeCollection.insertOne(datas)
       res.send(result)
@@ -154,7 +211,7 @@ async function run() {
 
     })
 
-    app.patch('/addEmployee/:id',verifyToken,verifyAdmin ,async (req, res) => {
+    app.patch('/addEmployee/:id', verifyToken, verifyAdmin, async (req, res) => {
       const doc = req.body
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
@@ -171,9 +228,10 @@ async function run() {
           Shift: doc?.Shift,
         }
       }
-      const result=await employyeCollection.updateOne(query,updatedDoc,options)
+      const result = await employyeCollection.updateOne(query, updatedDoc, options)
       res.send(result)
     })
+
 
 
     // menu related apis
@@ -396,5 +454,5 @@ app.get('/', async (req, res) => {
 })
 
 app.listen(port, () => {
-  console.log("runung")
+  console.log("runing")
 })
